@@ -53,19 +53,32 @@
 turtle = {}
 peripheral = {}
 -- end uncomment
+-- CONSTANTS
+gItemsAlias = {
+  thermoelectric = 'Thermoelectric Generator',
+  capacitor = 'capacitor',
+  ice = 'ice',
+  blutonium = 'blutonium'
+}
+-- END CONSTANTS
 
 -- SETTINGS
 gSize = 10
 gStorage = peripheral.wrap('forward')
+-- gStorage.getInventorySize()
+-- gStorage.getStackInSlot()
 gItemsToStore = {}
-table.insert(gItemsToStore, {startSlot = 0, endSlot = 3, item = 'thermoelectric'})
-table.insert(gItemsToStore, {startSlot = 4, endSlot = 7, item = 'blutonium'})
-table.insert(gItemsToStore, {startSlot = 8, endSlot = 11, item = 'ice'})
-table.insert(gItemsToStore, {startSlot = 12, endSlot = 15, item = 'capacitor'})
+table.insert(gItemsToStore, {startSlot = 1, endSlot = 4, item = gItemsAlias.thermoelectric})
+table.insert(gItemsToStore, {startSlot = 5, endSlot = 8, item = gItemsAlias.blutonium})
+table.insert(gItemsToStore, {startSlot = 9, endSlot = 12, item = gItemsAlias.ice})
+table.insert(gItemsToStore, {startSlot = 13, endSlot = 16, item = gItemsAlias.capacitor})
+
 
 -- END SETTINGS
 
 -- INITIALIZERS
+
+
 gCurrentPos = { -- standard cartesian. +x is east, +y is north, +z is upwards.
   x = 0, -- east or west
   y = 0, -- north or south
@@ -146,10 +159,6 @@ function turnsRequired (currentOrientation, finalOrientation) -- positive is Lef
   else
     return turnsRight
   end
-end
-
-function setOrientation (orientation)
-  gCurrentOrientation = gWordToNumericOrientationMapping[orientation]
 end
 
 function setNewPosXY (offsetAmount)
@@ -247,14 +256,6 @@ function moveZ (z)
   end
 end
 
-function addJobExtrudePillar(height, item, direction)
-
-end
-
-function doJobExtrudePillar(jobExtrudePillar)
-  -- check if we have enough item for given height.
-end
-
 function deployItem(direction, item)
   if turtle.getFuelLevel() < 1 then
     return 'nofuel'
@@ -292,10 +293,10 @@ function refillItemsAndReturn()
   -- remember this position too!
   helperPosition = gCurrentPos
   -- let's raise ourselves to length height + 1
-  table.insert(jobList,addJobMovement({dx = 0, dy = 0, dz = gSize + 1}, {'dx', 'dy', 'dz'}))
+  table.insert(jobList,addJobMove({dx = 0, dy = 0, dz = gSize + 1}, {'dx', 'dy', 'dz'}))
   -- now, move to origin! Get x to be 0, get y to be 0
-  -- get a jobMovement.
-  table.insert(jobList, addJobMovementAbs({x = 0, y = 0, z = 0}, {'dx', 'dy', 'dz'}))
+  -- get a jobMove.
+  table.insert(jobList, addJobMoveAbs({x = 0, y = 0, z = 0}, {'dx', 'dy', 'dz'}))
   -- refill our stuff
   table.insert(jobList,addJobChangeOrientation('south'))
   table.insert(jobList,addJobRefillStackMany(gItemsToStore))
@@ -303,11 +304,11 @@ function refillItemsAndReturn()
   table.insert(jobList,addJobChangeOrientation('north'))
   -- and go back to our old place.
   -- start off by going to 11.
-  table.insert(jobList, addJobMovement({dx = 0, dy = 0, dz = 11}, {'dx', 'dy', 'dz'}))
+  table.insert(jobList, addJobMove({dx = 0, dy = 0, dz = 11}, {'dx', 'dy', 'dz'}))
   -- then go to helperPosition.
-  table.insert(jobList,addJobMovementAbs(helperPosition, {'dx', 'dy', 'dz'}))
+  table.insert(jobList,addJobMoveAbs(helperPosition, {'dx', 'dy', 'dz'}))
   -- then go to the workHaltedPosition
-  table.insert(jobList,addJobMovementAbs(workHaltedPosition, {'dx', 'dy', 'dz'}))
+  table.insert(jobList,addJobMoveAbs(workHaltedPosition, {'dx', 'dy', 'dz'}))
   -- then change our orientation back.
   table.insert(jobList,addJobChangeOrientation(gNumericToWordOrientationMapping[workHaltedOrientation]))
   -- do the jobs.
@@ -315,76 +316,56 @@ function refillItemsAndReturn()
   -- WE'RE BACK!
 end
 
-function getStack(chest, chestLocation)
-
-end
-
-function goBackToStart()
-
-end
-
-function getBackToWork(secondLastPos, LastPos, orientation)
-
-end
-
-function isLocationAmbiguous()
-
+-- http://stackoverflow.com/questions/2421695/first-character-uppercase-lua
+function firstToUpper(str)
+    return (str:gsub("^%l", string.upper))
 end
 
 function doAllJobs(jobList)
-
+  for k,job in pairs(jobList) do
+    doJobFunc = 'do' .. firstToUpper(job.name)
+    _G[doJobFunc](job)
+  end
 end
 
-function doJob(jobEntry)
-
-end
-
-function addJobMovement(delta, order)
+function addJobMove(delta, order)
   return {
-    name = 'jobMovement',
+    name = 'jobMove',
     data = { delta = delta, order = order}
     -- order {'dz', 'dy', 'dx'}
     -- delta {dx = int, dy = int, dz = int}
   }
 end
 
-function doJobMovement(jobMovement)
-  for k,v in pairs(jobMovement.data.order) do
+function doJobMovement(jobMove)
+  for k,v in pairs(jobMove.data.order) do
     if v == 'dx' then
-      moveX(jobMovement.delta.dx)
+      moveX(jobMove.delta.dx)
     elseif v == 'dy' then
-      moveY(jobMovement.delta.dy)
+      moveY(jobMove.delta.dy)
     elseif v == 'dz' then
-      moveZ(jobMovement.delta.dx)
+      moveZ(jobMove.delta.dx)
     end
   end
 end
 
-function addJobMovementAbs (coord, order)
+function addJobMoveAbs (coord, order)
   return {
-    name = 'jobMovementAbs',
+    name = 'jobMoveAbs',
     data = {coord = coord, order = order}
     -- order {'dz', 'dy', 'dx'}
     -- cord {x = int, y = int, z = int}
   }
 end
 
-function doJobMovementAbs (jobMovementAbs)
+function doJobMovementAbs (jobMoveAbs)
   -- get current position and get dx, dy, dz.
   delta = {
-    dx = gCurrentPos.x - jobMovementAbs.coord.x,
-    dy = gCurrentPos.y - jobMovementAbs.coord.y,
-    dz = gCurrentPos.z - jobMovementAbs.coord.z
+    dx = gCurrentPos.x - jobMoveAbs.coord.x,
+    dy = gCurrentPos.y - jobMoveAbs.coord.y,
+    dz = gCurrentPos.z - jobMoveAbs.coord.z
   }
-  doJobMovement(addJobMovement(delta, jobMovementAbs.order))
-end
-
-function addJobTurn(direction)
-
-end
-
-function doJobTurn (jobTurn)
-  -- body...
+  doJobMovement(addJobMove(delta, jobMoveAbs.order))
 end
 
 function addJobChangeOrientation(orientation)
@@ -410,19 +391,33 @@ function addJobExtrusion(height, item)
 end
 
 function doJobExtrusion(jobExtrusion)
-  -- let's check where we are.
-  extrudeDirection = 'down'
-  dz = -1
-  if gCurrentPos.z == 0 then
-    extrudeDirection = 'up'
+  -- let's check where we are. then reposition ourselves.
+  distanceToTop = math.abs(gCurrentPos.z - 1)
+  distanceToBottom = math.abs(gCurrentPos.z - (jobExtrusion.data.height - 1))
+  jobList = {}
+  reverseDirectionMulti = 1
+  if gCurrentPos.z < 1 or gCurrentPos.z > (jobExtrusion.data.height - 1) then
+    reverseDirectionMulti = -1
+  end
+  if distanceToBottom > distanceToTop then
+    for i=1,distanceToTop do
+      table.insert(jobList,addJobMove({dx = 0, dy = 0, dz = 1 * reverseDirectionMulti}, {'dx', 'dy', 'dz'}))
+    end
+    placementDirection = 'up'
+    dz = -1
+  elseif distanceToBottom <= distanceToTop then
+    for i=1,distanceToBottom do
+      table.insert(jobList,addJobMove({dx = 0, dy = 0, dz = -1 * reverseDirectionMulti}, {'dx', 'dy', 'dz'}))
+    end
+    placementDirection = 'down'
     dz = 1
   end
-  jobList = {}
   -- now, we extrude.
   for i=1,jobExtrusion.data.height do
-    table.insert(jobList,addJobMovement({dx = 0, dy = 0, dz = dz}, {'dx', 'dy', 'dz'}))
-    table.insert(jobList,addJobDeployItem(jobExtrusion.data.item, extrudeDirection))
+    table.insert(jobList,addJobMove({dx = 0, dy = 0, dz = dz}, {'dx', 'dy', 'dz'}))
+    table.insert(jobList,addJobDeployItem(jobExtrusion.data.item, placementDirection))
   end
+  doAllJobs(jobList)
 end
 
 function addJobDeployItem (item, direction)
@@ -436,12 +431,7 @@ function doJobDeployItem (jobDeployItem)
   deployItem(jobDeployItem.data.direction, jobDeployItem.data.item)
 end
 
-function addJobForOddRows(length)
-  return {
-    name = 'jobForOddRows',
-    data = {length = length}
-  }
-end
+
 
 function getNthOdd (oddNumber)
   -- nth odd number, 2(n-1) + 1 = v
@@ -449,52 +439,52 @@ function getNthOdd (oddNumber)
   return (oddNumber + 1) / 2
 end
 
+function addJobForOddRows(length)
+  return {
+    name = 'jobForOddRows',
+    data = {length = length}
+  }
+end
+
 function doJobForOddRows(jobForOddRows)
-  -- we're starting at the bottom. ALWAYS.  Let's move forward
-  moveForward()
+  -- we're starting at the bottom, and at the first tower, first block. ALWAYS.
   -- we need to know whether we're 1, 5, 9 or are we 3, 7, 11, etc.
   -- so let's find our nthOdd. if even, put blutonium first. if not, put ice first.
   nthOdd = getNthOdd(gCurrentPos.x)
   itemPeriod = {}
   if nthOdd % 2 then
-    itemPeriod = {
-      'blutonium',
-      'thermoelectric',
-      'ice',
-      'thermoelectric'
-    }
+    table.insert(itemPeriod,gItemsAlias.blutonium)
+    table.insert(itemPeriod,gItemsAlias.thermoelectric)
+    table.insert(itemPeriod,gItemsAlias.ice)
+    table.insert(itemPeriod,gItemsAlias.thermoelectric)
   else
-    itemPeriod = {
-      'ice',
-      'thermoelectric',
-      'blutonium',
-      'thermoelectric'
-    }
+    table.insert(itemPeriod,gItemsAlias.ice)
+    table.insert(itemPeriod,gItemsAlias.thermoelectric)
+    table.insert(itemPeriod,gItemsAlias.blutonium)
+    table.insert(itemPeriod,gItemsAlias.thermoelectric)
   end
   -- make our item order.
   itemOrder = {}
   i = 1
   while i <= jobForOddRows.data.length do
-    for j=1,4 do
+    for j=1,#itemPeriod do
       table.insert(itemOrder,itemPeriod[j])
       i = i + 1
       if i > jobForOddRows.data.length then
         break
       end
     end
+    if i > jobForOddRows.data.length then
+      break
+    end
   end
   -- with these items, setup our extrusion jobs.
   jobList = {}
   for k,v in pairs(itemOrder) do
     table.insert(jobList,addJobExtrusion(gSize, v))
-    table.insert(jobList,addJobMovementForward())
+    table.insert(jobList,addJobMoveForward())
   end
-  -- add jobs to prepare for the next row.
-  dz = 0;
-  if gCurrentPos.z ~= 0 then
-    dz = -10
-  end
-  table.insert(jobList,addJobMovement({dx = 1, dy = 0, dz = dz}, {'dx', 'dy', 'dz'}))
+  table.insert(jobList,addJobMove({dx = 1, dy = 0, dz = 0}, {'dx', 'dy', 'dz'}))
   -- then face south.
   table.insert(jobList,addJobChangeOrientation('south'))
   -- and do all the jobs :)
@@ -502,11 +492,87 @@ function doJobForOddRows(jobForOddRows)
 end
 
 function addJobForEvenRows(length)
-
+  return {
+    name = 'jobForEvenRows',
+    data = {length = length}
+  }
 end
 
 function doJobForEvenRows (jobForEvenRows)
-  -- body...
+  -- we're starting at the bottom. ALWAYS.  Let's move forward
+  -- we need to know whether we're 1, 5, 9 or are we 3, 7, 11, etc.
+  -- so let's find our nthOdd. if even, put blutonium first. if not, put ice first.
+  itemPeriod = {
+    'thermoelectric',
+    'capacitor',
+  }
+  -- make our item order.
+  itemOrder = {}
+  i = 1
+  while i <= jobForEvenRows.data.length do
+    for j=1,#itemPeriod do
+      table.insert(itemOrder,itemPeriod[j])
+      i = i + 1
+      if i > jobForEvenRows.data.length then
+        break
+      end
+    end
+    if i > jobForEvenRows.data.length then
+      break
+    end
+  end
+  -- with these items, setup our extrusion jobs.
+  jobList = {}
+  for k,item in pairs(itemOrder) do
+    table.insert(jobList,addJobExtrusion(gSize, item))
+    table.insert(jobList,addJobMoveForward())
+  end
+  -- add jobs to prepare for the next row.
+  table.insert(jobList,addJobMove({dx = 1, dy = 0, dz = 0}, {'dx', 'dy', 'dz'}))
+  -- then face north.
+  table.insert(jobList,addJobChangeOrientation('north'))
+  -- and do all the jobs :)
+  doAllJobs(jobList)
+end
+
+function addJobMoveForward ()
+  return {
+    name = 'jobMoveForward'
+  }
+end
+
+function doJobMoveForward (jobMoveForward)
+  moveForward()
+end
+
+function addJobMoveBack ()
+  return {
+    name = 'jobMoveBack'
+  }
+end
+
+function doJobMoveBack (jobMoveBack)
+  moveBack()
+end
+
+function addJobMoveUp ()
+  return {
+    name = 'jobMoveUp'
+  }
+end
+
+function doJobMoveUp (jobMoveUp)
+  moveDown()
+end
+
+function addJobMoveUp ()
+  return {
+    name = 'jobMoveUp'
+  }
+end
+
+function doJobMoveUp (jobMoveUp)
+  moveUp()
 end
 
 function addJobRefillStackMany(itemList)
@@ -539,30 +605,44 @@ function addJobRefillStack(item, startSlot, endSlot)
 end
 
 function doJobRefillStack(jobRefillStack)
-  -- finish me up.
+  inventorySize = gStorage.getInventorySize()
+  for k,item in pairs(jobRefillStack.data) do
+    for i=item.startSlot,item.endSlot do
+      for j=1,inventorySize do
+        itemInStorage = gStorage.getStackInSlot(j)
+        if itemInStorage.display_name == item.item then
+          gStorage.pushItemIntoSlot('back', j, 64, i)
+        end
+      end
+    end
+  end
 end
 
-function generateJobListForSize(length) -- squarish, must be in
+function generateJobListForSize() -- squarish, must be in
   jobList = {}
   -- start by grabbing items required for our tower.
   -- let's assume our chest is south of origin.
   table.insert(jobList, addJobChangeOrientation('south'))
   -- then pick up our stack of items.
   table.insert(jobList,addJobRefillStackMany(gItemsToStore))
-  -- now, let's get to work. Move to 1, 1, 0 first. 1, 1, 0 is empty.
-  table.insert(jobList, addJobMovement({dx = 1, dy = 1, dz = 0}, {'dx', 'dy', 'dz'}))
+  -- now, let's get to work. Move to 1, 1, 1 first. 1, 1, 1 is empty.
+  -- why 1, 1, 1? because you need to place blocks below the turtle, or above it.
+  table.insert(jobList, addJobMove({dx = 1, dy = 1, dz = 1}, {'dx', 'dy', 'dz'}))
   -- then face north.
   table.insert(jobList, addJobChangeOrientation('north'))
 
   -- let's queue up our jobs.
-  for i=1,length do
+  for i=1,gSize do
     isOdd = i % 2
     if isOdd then
       -- do the thing for odd rows.
-      table.insert(jobList, addJobForOddRows(length))
+      table.insert(jobList, addJobForOddRows(gSize))
     else
       -- do the thing for even rows.
-      table.insert(jobList, addJobForEvenRows(length))
+      table.insert(jobList, addJobForEvenRows(gSize))
     end
   end
+  return jobList
 end
+
+doAllJobs(generateJobListForSize())
